@@ -159,3 +159,11 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 .DS_Store
+src/template/main.aux
+src/template/main.bbl
+src/template/main.blg
+src/template/main.maf
+src/template/main.mtc
+src/template/main.mtc0
+src/template/main.out
+src/template/main.pdf
