@@ -2,7 +2,7 @@ from beartype import beartype
 from symai import Symbol, Expression, Function
 from symai.components import FileReader
 from pathlib import Path
-from components import Paper, RelatedWork, Cite, Abstract, Title, Method, Source
+from components import Paper, Introduction, RelatedWork, Cite, Abstract, Title, Method, Source
 
 
 
@@ -29,18 +29,20 @@ if __name__ == "__main__":
     task = Symbol("[Objective]\nWrite a paper about the SymbolicAI framework. Include citations and references from the referenced papers. Follow primarily the [Task] instructions.")
     hierarchy = Paper(
         Method(
-            Source(file_link=(dir_path / "method/symbolicai_docs.txt").as_posix()),
+            Source(url_link='https://arxiv.org/abs/2402.05934'),
         ),
         RelatedWork(
-            Cite(file_link=(dir_path / "bib/related_work/newell56.txt").as_posix()),
-            Cite(file_link=(dir_path / "bib/related_work/newell57.txt").as_posix()),
-            Cite(file_link=(dir_path / "bib/related_work/laird87.txt").as_posix()),
-            Cite(file_link=(dir_path / "bib/related_work/newell72.txt").as_posix()),
-            Cite(file_link=(dir_path / "bib/related_work/mccarthy06.txt").as_posix()),
+            Cite(bib_link='Newell:56'),
+            Cite(file_link=(dir_path / "bib/related_work/Newell:57.txt").as_posix()),
+            Cite(file_link=(dir_path / "bib/related_work/Laird:87.txt").as_posix()),
+            Cite(file_link=(dir_path / "bib/related_work/Newell:72.txt").as_posix()),
+            Cite(file_link=(dir_path / "bib/related_work/McCarthy:06.txt").as_posix()),
         ),
+        Introduction(),
         Abstract(),
         Title(),
     )
 
     doc_gen = DocumentGenerator()
     res = doc_gen(task, hierarchy)
+    print(res)

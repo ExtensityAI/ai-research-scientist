@@ -1,16 +1,16 @@
 {
     "version": "0.0.1",
     "name": "ExtensityAI/docmatic",
-    "description": "<Project Description>",
+    "description": "Generate an entire document.",
     "expressions": [
         {
             "module": "src/func",
-            "type": "MyExpression"
+            "type": "DocumentGenerator"
         }
     ],
     "run": {
         "module": "src/func",
-        "type": "MyExpression"
+        "type": "DocumentGenerator"
     },
     "dependencies": []
 }

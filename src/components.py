@@ -1,25 +1,34 @@
-from symai import Function
-from symai.components import Sequence, Parallel
+from pathlib import Path
+from typing import Optional
+
+from symai import Symbol, Function
+from symai.extended import BibTexParser
+from symai.components import Sequence, Parallel, FileReader
 from symai.extended import Conversation
 from symai.post_processors import StripPostProcessor, CodeExtractPostProcessor
 
 
-SYMBOLIC_AI_PAPER = """Write a scientific paper about the machine learning framework called SymbolicAI which operates on the following principles:
+DEFAULT_BIB_PATH = (Path(__file__).parent.absolute() / "documents" / "bib" / "references.bib").as_posix()
+
+GLOBAL_PAPER_CONTEXT = """Write a scientific paper about the machine learning framework called SymbolicAI which operates on the following principles:
 - Symbolic methods
 - Sub-symbolic methods
 - Neural-symbolic methods
 - Probabilistic programming methods
 - Cognitive architectures
-Be precise in your writing and follow a scientific style. Do not use any colloquial language. However, formulate simple and understandable sentences."""
+Be precise in your writing and follow a scientific style. Do not use any colloquial language. However, formulate simple and understandable sentences.
+Avoid using filler word and phrases. Be highly technical and precise in your writing style."""
 
 
 PAPER_STATIC_CONTEXT = """[General Context]
 {context}
 
-[Format]
+[Detailed Description]
 Your output format should be parsable by a LaTeX compiler. All produced content should be enclosed between the \n```latex\n ... \n``` blocks. Do not create document classes or other LaTeX meta commands. Always assume that the document class is already defined. Only produce exactly one latex block with all your content.
 Only use either `section`, `subsection`, paragraph`, `texttt`, `textbf`, `emph` or `citep` commands to structure your content. Do not use any other LaTeX commands.
-The following is an example of your expected output:
+NEVER change the citation style / tag names. Always keep the original `cite` or `citep` format, i.e. `\citep{{Placeholder:YY}}` remains as is at the same position in your text, where `Placeholder` represents the actual citation name and `YY` the two digit year format. Here are some examples: `\citep{{Newell:56}}`, `\citep{{Newell:57}}`, `\citep{{Laird:87}}`, `\citep{{Newell:72}}`, `\citep{{McCarthy:06}}`.
+
+The following is a general example of your expected output:
 
 [Example]
 ```latex
@@ -28,13 +37,18 @@ The following is an example of your expected output:
 % TODO: your content here
 \\end{{document}}
 ```
+Do not create `\\begin{{document}}` or `\\end{{document}}` commands. Only the content that would be placed into the TODO block expected between ```latex ... ``` if not otherwise specified.
+NEVER repeat a section or subsection name if one already exists in the document.
 
 {description}
 """
 
 
+DO_NOT_CHANGE_CITATIONS = "Do NOT ADD ANY NEW citations or references. Just focus on the content / summary and preserve 1:1 existing citations and references if there are any."
+
+
 class Paper(Function):
-    def __init__(self, *sequence, context: str = SYMBOLIC_AI_PAPER, **kwargs):
+    def __init__(self, *sequence, context: str = GLOBAL_PAPER_CONTEXT, **kwargs):
         super().__init__(**kwargs)
         self.sequence = Sequence(*sequence)
         self.context  = context
@@ -44,18 +58,42 @@ class Paper(Function):
         res         = self.sequence(task, **kwargs)
         # access results from the global root node metadata
         results     = self.linker.results
-        # return the reversed results
-        reverse_res = str(list(reversed(list(results.values()))))
-        # create the final task by concatenating the results
-        return super().forward(task | reverse_res | res, **kwargs)
+        # all other results except the title, abstract, cite and source:
+        document    = [results[key].__str__() for key in results if not any([task in key for task in ['Title', 'Abstract', 'Cite', 'Source', 'Parallel', 'Sequence']]) and results[key].value_type == str]
+        # reverse the order of the document to match the expected output
+        document    = document[::-1]
+        # create the final result
+        result = Symbol({
+            "title": self.linker.find('Title').__str__(),
+            "abstract": self.linker.find('Abstract').__str__(),
+            "document": "\n".join(document)
+        })
+        return result
+
 
     @property
     def static_context(self):
-        return PAPER_STATIC_CONTEXT.format(context=self.context, description='The final paper must include the title an abstract and a related work section and method section.')
+        return PAPER_STATIC_CONTEXT.format(context=self.context,
+                                           description=f'''The final paper must include the title an abstract and a related work section and method section.
+Try to preserve the original content and generate a coherent text based on the provided context.
+
+[Format]
+Instead of the ```latex ... ``` format, print the output in a ```json ... ``` format as shown below with the following structure:
+```json
+{{
+  "title": "Your title...",
+  "abstract": "Your abstract...",
+  "document": "Your other sections, subsections, and paragraphs and all the content e.g. introduction, related work, method, etc. ..."
+}}
+```
+Include all the LaTeX commands and content in the `document` field. Preserve ALL the original citations, references  and content according to best scientific writing practices.
+The final document should be at least 2 pages long.
+{DO_NOT_CHANGE_CITATIONS}
+''')
 
 
 class Context(Conversation):
-    def __init__(self, context: str = SYMBOLIC_AI_PAPER, **kwargs):
+    def __init__(self, context: str = GLOBAL_PAPER_CONTEXT, **kwargs):
         super().__init__(**kwargs)
         self.auto_print   = False
         self.prompt       = 'Replace the % TODO: with your content and follow the task description below.'
@@ -78,12 +116,74 @@ class Context(Conversation):
 
 
 class Source(Context):
+    bib_parser = BibTexParser()
+    reader     = FileReader()
+    bib_references = [line for line in reader(DEFAULT_BIB_PATH) / '\n\n' if line]
+
+    def __init__(self,
+                 context: str = GLOBAL_PAPER_CONTEXT,
+                 bib_link: Optional[str] = None,
+                 file_link: Optional[str] = None,
+                 url_link: Optional[str] = None,
+                 bib_path: str = DEFAULT_BIB_PATH,
+                 **kwargs):
+        super().__init__(context=context, file_link=file_link, url_link=url_link, **kwargs)
+        self.bib_link  = bib_link
+        self.bib_path  = bib_path
+        if bib_link is not None:
+            self.store_bib(bib_ref=bib_link)
+
+    def forward(self, task, *args, **kwargs):
+        assert self.bib_value is not None, f"Reference not set for bib_value: {self.bib_value}."
+        res = super().forward(task,
+                              payload="ONLY EXCEPTION CASE - use this citation for the summary: \citep{" + str(self.bib_value) + "}",
+                              *args, **kwargs)
+        return res
+
+    def store_bib(self, bib_ref: str, *args, **kwargs):
+        # get exact matching bib_ref from references
+        ref     = [ref for ref in Source.bib_references if bib_ref in ref]
+        assert len(ref) == 1, f"Reference {bib_ref} not found in {self.bib_path}."
+        paper   = (Path(__file__).parent.absolute() / "documents" / "bib" / "related_work" / f"{bib_ref}.txt").as_posix()
+        content = self.reader(paper)
+        val     = Symbol(f"[PAPER::{bib_ref}]: <<<\n{str(content)}\n>>>\n") | f"[BIBLIOGRAPHY::{bib_ref}]: <<<\n{str(ref[0])}\n>>>\n"
+        self.store(str(val))
+        self.bib_value = bib_ref
+
+    def store_file(self, file_path: str, *args, **kwargs):
+        content  = self.reader(file_path)
+        bib      = Source.bib_parser(content).split(',')
+        bib_ref  = bib[0].split('{')[-1]
+        Source.bib_references.append(','.join(bib))
+        val      = Symbol(f"[PAPER::{bib_ref}]: <<<\n{str(content)}\n>>>\n") | f"[BIBLIOGRAPHY::{bib_ref}]: <<<\n{str(bib)}\n>>>\n"
+        self.store(str(val))
+        self.bib_value = bib_ref
+
+    def store_url(self, url: str, *args, **kwargs):
+        content  = self.crawler(url)
+        bib      = Source.bib_parser(url | content).split(',')
+        bib_ref  = bib[0].split('{')[-1]
+        Source.bib_references.append(','.join(bib))
+        val      = Symbol(f"[PAPER::{bib_ref}]: <<<\n{str(content)}\n>>>\n") | f"[BIBLIOGRAPHY::{bib_ref}]: <<<\n{str(bib)}\n>>>\n"
+        self.store(str(val))
+        self.bib_value = bib_ref
+
+    @property
+    def description(self):
+        return f"""[Task]
+Summarize the referenced method to use it as a conditioning context for a large Language model like GPT-3.
+Do NOT create any sections or subsections. Only write one coherent text about the main principles and concepts of the method.
+{DO_NOT_CHANGE_CITATIONS}
+"""
+
+
+class Cite(Source):
     @property
     def description(self):
         return """[Task]
-Summarize the referenced method to use it as a conditioning context for a large Language model like GPT-3.
-Do not create any sections or subsections. Only write one coherent text about the main principles and concepts of the method.
+Write a short two sentence related work summary in the context of the paper. Do not add any sections or subsections.
 """
+
 
 class Method(Context):
     def __init__(self, source, **kwargs):
@@ -98,16 +198,9 @@ class Method(Context):
 
     @property
     def description(self):
-        return """[Task]
-Your goal is to write the method section which describes the main approach and principles used. Add one methodology section with one consistent paragraph. Provide citations and references.
-"""
-
-
-class Cite(Source):
-    @property
-    def description(self):
-        return """[Task]
-Write a short two sentence related work summary in the context of the paper. Do not add any sections or subsections.
+        return f"""[Task]
+Your goal is to write the method section which describes the methodological principles of the provided content.
+{DO_NOT_CHANGE_CITATIONS}
 """
 
 
@@ -123,8 +216,9 @@ class RelatedWork(Context):
 
     @property
     def description(self):
-        return """[Task]
-Write a coherent related work section in the context of the paper and based on the provided citation sources. Add one related work section with one consistent paragraph. Provide citations and references.
+        return f"""[Task]
+Write a coherent related work section in the context of the paper and based on the provided citation sources.
+{DO_NOT_CHANGE_CITATIONS}
 """
 
 
@@ -140,8 +234,9 @@ class Introduction(Context):
 
     @property
     def description(self):
-        return """[Task]
-Write a coherent introduction section in the context of the paper and based on the provided context. Add one introduction section with one consistent paragraph. Provide citations and references.
+        return f"""[Task]
+Write a coherent introduction section in the context of the paper and based on the provided context.
+{DO_NOT_CHANGE_CITATIONS}
 """
 
 
@@ -150,6 +245,15 @@ class Abstract(Context):
     def description(self):
         return """[Task]
 Write the paper abstract given the provided context. Add one abstract section with one consistent paragraph.
+
+[Format]
+The abstract should be wrapped as follows:
+```latex
+\begin{{abstract}}
+% TODO: your content here
+\end{{abstract}}
+```
+Generate the `begin{abstract}` and `end{abstract}` commands and place the content between the TODO block.
 """
 
 
@@ -158,4 +262,10 @@ class Title(Context):
     def description(self):
         return """[Task]
 Write the paper title given the provided context. Add one title tag for the document.
+
+[Format]
+The title should be wrapped in a `title` command as follows:
+```latex
+\title{Your title here}
+```
 """
