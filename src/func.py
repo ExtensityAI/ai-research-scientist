@@ -19,8 +19,9 @@ class DocumentGenerator(Expression):
         self,
         task: Symbol,
         hierarchy: Expression,
+        **kwargs
     ) -> Symbol:
-        document = hierarchy(task)
+        document = hierarchy(task, **kwargs)
 
         return document
 
@@ -29,7 +30,7 @@ if __name__ == "__main__":
     task = Symbol("[Objective]\nWrite a paper about the SymbolicAI framework. Include citations and references from the referenced papers. Follow primarily the [Task] instructions.")
     hierarchy = Paper(
         Method(
-            Source(url_link='https://arxiv.org/abs/2402.05934'),
+            Source(file_link=(dir_path / "method/symbolicai_docs.txt").as_posix()),
         ),
         RelatedWork(
             Cite(bib_link='Newell:56'),
