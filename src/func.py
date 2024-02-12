@@ -1,12 +1,14 @@
-import sys
 import os
-from typing import Dict
-from beartype import beartype
-from symai import Symbol, Expression, Function
-from symai.components import FileReader
+import sys
 from pathlib import Path
-from components import Paper, Introduction, RelatedWork, Cite, Abstract, Title, Method, Source
 
+from beartype import beartype
+from beartype.typing import Dict
+from symai import Expression, Function, Symbol
+from symai.components import FileReader
+
+from components import (Abstract, Cite, Introduction, Method, Paper,
+                        RelatedWork, Source, Title)
 
 
 class DocumentGenerator(Expression):
@@ -32,10 +34,10 @@ class DocumentGenerator(Expression):
     @staticmethod
     def compile_document(
         document_name: str,
+        template_dir: Path
     ):
-        template_dir = Path(__file__).parent.absolute() / "template"
 
-        os.environ['TEXINPUTS'] = f"{template_dir.as_posix()}:{os.environ.get('TEXINPUTS', '')}"
+        os.environ['TEXINPUTS'] = f"{template_dir}:{os.environ.get('TEXINPUTS', '')}"
         os.environ["openout_any"] = "a"
         os.chdir(template_dir)
 
@@ -55,26 +57,27 @@ class DocumentGenerator(Expression):
         pass
 
 if __name__ == "__main__":
-    dir_path = Path(__file__).parent.absolute() / "documents"
+    dir_path     = Path(__file__).parent.absolute() / "documents"
+    template_dir = Path(__file__).parent.absolute() / "template"
     task = Symbol("[Objective]\nWrite a paper about the SymbolicAI framework. Include citations and references from the referenced papers. Follow primarily the [Task] instructions.")
-    # hierarchy = Paper(
-    #     Method(
-    #         Source(file_link=(dir_path / "method/symbolicai_docs.txt").as_posix()),
-    #     ),
-    #     RelatedWork(
-    #         Cite(bib_link='Newell:56'),
-    #         Cite(file_link=(dir_path / "bib/related_work/Newell:57.txt").as_posix()),
-    #         Cite(file_link=(dir_path / "bib/related_work/Laird:87.txt").as_posix()),
-    #         Cite(file_link=(dir_path / "bib/related_work/Newell:72.txt").as_posix()),
-    #         Cite(file_link=(dir_path / "bib/related_work/McCarthy:06.txt").as_posix()),
-    #     ),
-    #     Introduction(),
-    #     Abstract(),
-    #     Title(),
-    # )
+    hierarchy = Paper(
+        Method(
+            Source(file_link=(dir_path / "method/symbolicai_docs.txt").as_posix()),
+        ),
+        RelatedWork(
+            Cite(bib_link='Newell:56'),
+            Cite(file_link=(dir_path / "bib/related_work/Newell:57.txt").as_posix()),
+            Cite(file_link=(dir_path / "bib/related_work/Laird:87.txt").as_posix()),
+            Cite(file_link=(dir_path / "bib/related_work/Newell:72.txt").as_posix()),
+            Cite(file_link=(dir_path / "bib/related_work/McCarthy:06.txt").as_posix()),
+        ),
+        Introduction(),
+        Abstract(),
+        Title(),
+    )
 
-    import json
-    res = json.load(open("/tmp/res.json"))
     doc_gen = DocumentGenerator()
-    doc_gen.compile_document("main")
-    # res = doc_gen(task, hierarchy) # This will be a Symbol
+    res = doc_gen(task, hierarchy) # This will be a Symbol
+
+    # Test compile…
+    doc_gen.compile_document("main", template_dir)
