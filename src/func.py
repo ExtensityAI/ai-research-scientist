@@ -7,7 +7,7 @@ from beartype.typing import Dict
 from symai import Expression, Function, Symbol
 from symai.components import FileReader
 
-from components import (Abstract, Cite, Introduction, Method, Paper,
+from components import (Abstract, Cite, Introduction, Method, Implementation, Paper,
                         RelatedWork, Source, Title)
 
 
@@ -52,15 +52,40 @@ class DocumentGenerator(Expression):
     @staticmethod
     def write_document(
         document_name: str,
+        template_dir: Path,
         content: Dict,
     ):
-        pass
+        # load the template
+        with open(f"{template_dir / document_name}.tex.template", "r") as file:
+            template = file.read()
+        # replace the content
+        for key, value in content.items():
+            template = template.replace(f"%TODO{{{key}}}", value)
+        # write the document
+        with open(f"{template_dir / document_name}.tex", "w") as file:
+            file.write(template)
+
+
+GLOBAL_PAPER_CONTEXT = """[Global Context]
+Write a scientific paper about the machine learning framework called SymbolicAI which operates on the following principles:
+- Symbolic methods
+- Sub-symbolic methods
+- Neural-symbolic methods
+- Probabilistic programming methods
+- Cognitive architectures
+Be precise in your writing and follow a scientific style. Do not use any colloquial language. However, formulate simple and understandable sentences.
+Avoid using filler words and phrases. Be highly technical and precise in your writing style."""
+
 
 if __name__ == "__main__":
     dir_path     = Path(__file__).parent.absolute() / "documents"
     template_dir = Path(__file__).parent.absolute() / "template"
     task = Symbol("[Objective]\nWrite a paper about the SymbolicAI framework. Include citations and references from the referenced papers. Follow primarily the [Task] instructions.")
+    Paper.context = GLOBAL_PAPER_CONTEXT
     hierarchy = Paper(
+        Implementation(
+            Source(file_link=(dir_path / "method/symbolicai_docs.txt").as_posix()),
+        ),
         Method(
             Source(file_link=(dir_path / "method/symbolicai_docs.txt").as_posix()),
         ),
@@ -78,6 +103,10 @@ if __name__ == "__main__":
 
     doc_gen = DocumentGenerator()
     res = doc_gen(task, hierarchy) # This will be a Symbol
+    res = { "author": r"\author{GPT4 Turbo, Claudiu Leoveanu-Condrei, Marius-Constantin Dinu}", **res.value }
 
-    # Test compile…
+    # write the document
+    doc_gen.write_document("main", template_dir, res)
+
+    # compile the document
     doc_gen.compile_document("main", template_dir)
