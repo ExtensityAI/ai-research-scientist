@@ -197,7 +197,7 @@ class Method(Context):
     @property
     def description(self):
         return f"""[Task]
-Your goal is to write the method section which describes the methodological principles of the provided content. Focus on a conceptual level and make connections to research related in the respective fields. Add mathematical formulas and formulations where appropriate and write proper definitions and explanations.
+Your goal is to write the method section which describes the methodological principles of the provided source history. Focus on a conceptual level and make connections to research related in the respective fields. Add mathematical formulas and formulations where appropriate and write proper definitions and explanations, but only related to the source history.
 {DO_NOT_CHANGE_CITATIONS}
 """
 
