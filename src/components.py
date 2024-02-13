@@ -213,7 +213,7 @@ class Implementation(Context):
     @property
     def description(self):
         return f"""[Task]
-Your goal is to write the implementation section which describes the technical details of the provided content. Create one main section but avoid adding multiple fragmented subsections. Write multiple content paragraphs only separated by a newline and show mainly the technical details of the implementation. Address all technical details relevant to the [Global Context]. Add code snippets and examples where appropriate.
+Your goal is to write the implementation section which describes the technical details of the provided content. Create one main section but avoid adding multiple fragmented subsections. Write multiple content paragraphs only separated by a newline and show mainly the technical details of the implementation. Address all technical details relevant to the [Global Context]. Add code snippets and examples where appropriate, but only related to the source history. Do not add generic code snippets.
 {DO_NOT_CHANGE_CITATIONS}
 """
 
@@ -262,7 +262,7 @@ class Introduction(Context):
     def description(self):
         return f"""[Task]
 Write a coherent introduction section in the context of the paper and based on the provided context.
-Do not add any subsections. Write multiple content paragraphs only separated by a newline.
+Do not add any subsections or paragraph tags. Write multiple content text blocks only separated by a newline.
 {DO_NOT_CHANGE_CITATIONS}
 """
 
