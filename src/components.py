@@ -18,10 +18,10 @@ PAPER_STATIC_CONTEXT = """[General Context]
 [Detailed Description]
 Your output format should be parsable by a LaTeX compiler. All produced content should be enclosed between the \n```latex\n ... \n``` blocks. Do not create document classes or other LaTeX meta commands. Always assume that the document class is already defined. Only produce exactly one latex block with all your content.
 Only use either `section`, `subsection`, `paragraph`, `texttt`, `textbf`, `emph`, `lstlisting` or `citep` commands to structure your content. Do not use any other LaTeX commands.
-When using `\paragraph{{...}}` commands, always include a name in the curly brackets, e.g. `\paragraph{{My paragraph name}}`.
-If you use the `lstlisting` command, always include a caption and a label, e.g. `\begin{{lstlisting}}[caption=My caption,label=lst:mylabel] ... \end{{lstlisting}}`.
+When using `\\paragraph{{...}}` commands, always include a name in the curly brackets, e.g. `\\paragraph{{My paragraph name}}`.
+If you use the `lstlisting` command, always include a caption and a label, e.g. `\\begin{{lstlisting}}[caption=My caption,label=lst:mylabel] ... \\end{{lstlisting}}` and every begin command must have a corresponding end command.
 Only use `lstlisting` for code snippets if addressing the implementation section and it is related to the respective source content.
-NEVER change the citation style / tag names. Always keep the original `cite` or `citep` format, i.e. `\citep{{Placeholder:YY}}` remains as is at the same position in your text, where `Placeholder` represents the actual citation name and `YY` the two digit year format. Here are some examples: `\citep{{Newell:56}}`, `\citep{{Newell:57}}`, `\citep{{Laird:87}}`, `\citep{{Newell:72}}`, `\citep{{McCarthy:06}}`.
+NEVER change the citation style / tag names. Always keep the original `cite` or `citep` format, i.e. `\\citep{{Placeholder:YY}}` remains as is at the same position in your text, where `Placeholder` represents the actual citation name and `YY` the two digit year format. Here are some examples: `\\citep{{Newell:56}}`, `\\citep{{Newell:57}}`, `\\citep{{Laird:87}}`, `\\citep{{Newell:72}}`, `\\citep{{McCarthy:06}}`.
 
 The following is a general example of your expected output:
 
@@ -178,7 +178,7 @@ Do NOT create any sections or subsections. Only write one coherent text about th
 class Cite(Source):
     @property
     def description(self):
-        return """[Task]
+        return f"""[Task]
 Write a short two sentence related work summary in the context of the paper. Do not add any sections or subsections.
 """
 
@@ -192,7 +192,7 @@ class Method(Context):
         summary = self.source(task, **kwargs)
         # update the dynamic context globally for all types
         self.adapt(context=summary, types=[RelatedWork, Abstract, Title, Introduction, Cite])
-        return super().forward(task | self.source.history(), **kwargs)
+        return super().forward(task | f"[Source]\n{self.source.history()}", **kwargs)
 
     @property
     def description(self):
@@ -208,7 +208,7 @@ class Implementation(Context):
         self.source = source
 
     def forward(self, task, **kwargs):
-        return super().forward(task | self.source.history(), **kwargs)
+        return super().forward(task | f"[Source]\n{self.source.history()}", **kwargs)
 
     @property
     def description(self):
@@ -270,29 +270,29 @@ Do not add any subsections or paragraph tags. Write multiple content text blocks
 class Abstract(Context):
     @property
     def description(self):
-        return """[Task]
+        return f"""[Task]
 Write the paper abstract given the provided context. Add one abstract section with only ONE consistent paragraph capturing the essence of the paper.
 
 [Format]
 The abstract should be wrapped as follows:
 ```latex
-\begin{{abstract}}
+\\begin{{abstract}}
 % TODO: your content here
-\end{{abstract}}
+\\end{{abstract}}
 ```
-Generate the `begin{abstract}` and `end{abstract}` commands and place the content between the TODO block.
+Generate the `\\begin{{abstract}}` and `\\end{{abstract}}` commands and place the content between the TODO block.
 """
 
 
 class Title(Context):
     @property
     def description(self):
-        return """[Task]
+        return f"""[Task]
 Write the paper title given the provided context. Add one title tag for the document.
 
 [Format]
 The title should be wrapped in a `title` command as follows:
 ```latex
-\title{Your title here}
+\\title{{Your title here}}
 ```
 """
