@@ -516,7 +516,6 @@
 \newcommand{\digit}[1]{\vcenter{\hbox{\includegraphics[height=10pt]{#1}}}}
 \newcommand{\X}{\mathcal{X} }
 \newcommand{\Sym}{\mathcal{S} }
-\newcommand{\G}{\mathbf{G} }
 \newcommand{\W}{\mathbf{W} }
 
 \newcommand{\parents}{Pa} % See usage in notation.tex. Chosen to match Daphne's book.

@@ -1,5 +1,4 @@
 import os
-import sys
 from pathlib import Path
 
 from beartype import beartype
@@ -73,8 +72,12 @@ Write a scientific paper about the machine learning framework called SymbolicAI 
 - Neural-symbolic methods
 - Probabilistic programming methods
 - Cognitive architectures
-Be precise in your writing and follow a scientific style. Do not use any colloquial language. However, formulate simple and understandable sentences.
-Avoid using filler words and phrases. Be highly technical and precise in your writing style."""
+
+Consider:
+- Be precise in your writing and follow a scientific style.
+- Do not use any colloquial language, especially many adjectives and adverbs.
+- Formulate simple and understandable sentences.
+- Avoid using filler words and phrases."""
 
 
 if __name__ == "__main__":
