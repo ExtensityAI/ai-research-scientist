@@ -4,11 +4,11 @@ from pathlib import Path
 
 from beartype import beartype
 from beartype.typing import Dict
-from symai import Expression, Function, Symbol
-from symai.components import FileReader, Trace
+from symai import Symbol, Expression
+from symai.components import Trace, GraphViz
 
 from components import (Abstract, Cite, Introduction, Method, Implementation, Algorithm, Paper,
-                        RelatedWork, Source, Title, Appendix)
+                        RelatedWork, Source, Title, Appendix, Image)
 
 
 class DocumentGenerator(Expression):
@@ -142,3 +142,6 @@ if __name__ == "__main__":
 
     # compile the document
     doc_gen.compile_document("main", template_dir)
+
+    # visualize the computation graph
+    GraphViz()(hierarchy, 'tmp/paper.html')

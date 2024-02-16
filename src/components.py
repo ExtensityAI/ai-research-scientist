@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Optional
+from pdf2image import convert_from_path
 
 from symai import Symbol, Expression, Function
 from symai.extended import BibTexParser
@@ -55,7 +56,7 @@ class Paper(Expression):
         # access results from the global root node metadata
         results     = self.linker.results
         # all other results except the title, abstract, cite and source:
-        document    = [results[key].__str__() for key in results if not any([task in key for task in ['Title', 'Abstract', 'Cite', 'Source', 'Parallel', 'Sequence', ]]) and results[key].value_type == str]
+        document    = [results[key].__str__() for key in results if not any([task in key for task in ['Title', 'Abstract', 'Cite', 'Source', 'Parallel', 'Sequence', 'Image']]) and results[key].value_type == str]
         # reverse the order of the document to match the expected output
         document    = document[::-1]
         # get the appendix content
@@ -161,6 +162,38 @@ class Cite(Source):
     def description(self):
         return f"""[Task]
 Write a short two sentence related work summary in the context of the paper. Do not add any sections or subsections.
+"""
+
+
+class Image(Expression):
+    def __init__(self, file_link, **kwargs):
+        super().__init__(**kwargs)
+        self.file_link = file_link
+
+    def forward(self, task, **kwargs):
+        pages = convert_from_path(f"{self.file_link}.pdf", 500)
+        pages[0].save(f'tmp/image_out.jpg', 'JPEG')
+        res = Expression.prompt(self.description, model='gpt-4-vision-preview', **kwargs)
+        template = f"""\\begin{{figure}}[h!]
+    \\centering
+    \\includegraphics[width=1.0\\linewidth]{{/Users/xpitfire/.symai/packages/ExtensityAI/docmatic/src/documents/method/{self.file_link}}}
+    \\caption{str(res)}
+    \\label{{fig:{self.file_link}}}
+\\end{{figure}}
+"""
+        return template
+
+    @property
+    def description(self):
+        return f"""[Task]
+Your output format should be parsable by a LaTeX compiler. All produced content should be enclosed between the \n```latex\n ... \n``` blocks. Do not create document classes or other LaTeX meta commands. Always assume that the document class is already defined. Only produce exactly one latex block with all your content.
+Your task now is to write a caption for the provided image.
+\\caption{{Your caption here}}
+Only return the text of the caption. Do not return the tags `\\caption` or any other LaTeX commands. Just the text within the curly brackets in the format ```latex ... ```.
+{DO_NOT_CHANGE_CITATIONS}
+{DO_NOT_ADD_ALGORITHMS}
+
+'<<vision:image_out.jpg:>>'
 """
 
 
