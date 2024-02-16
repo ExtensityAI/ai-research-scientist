@@ -1,13 +1,14 @@
 import os
+import re
 from pathlib import Path
 
 from beartype import beartype
 from beartype.typing import Dict
 from symai import Expression, Function, Symbol
-from symai.components import FileReader
+from symai.components import FileReader, Trace
 
-from components import (Abstract, Cite, Introduction, Method, Implementation, Paper,
-                        RelatedWork, Source, Title)
+from components import (Abstract, Cite, Introduction, Method, Implementation, Algorithm, Paper,
+                        RelatedWork, Source, Title, Appendix)
 
 
 class DocumentGenerator(Expression):
@@ -40,9 +41,10 @@ class DocumentGenerator(Expression):
         os.environ["openout_any"] = "a"
         os.chdir(template_dir)
 
-        os.system(f"lualatex --output-directory={template_dir} {template_dir / document_name}.tex")
+        os.system(f"lualatex --interaction=batchmode --output-directory={template_dir} {template_dir / document_name}.tex")
         os.system(f"bibtex {template_dir / document_name}")
-        os.system(f"lualatex --output-directory={template_dir} {template_dir / document_name}.tex")
+        os.system(f"lualatex --interaction=batchmode --output-directory={template_dir} {template_dir / document_name}.tex")
+        os.system(f"lualatex --interaction=batchmode --output-directory={template_dir} {template_dir / document_name}.tex")
 
         del os.environ['TEXINPUTS']
         del os.environ["openout_any"]
@@ -60,12 +62,24 @@ class DocumentGenerator(Expression):
         # replace the content
         for key, value in content.items():
             template = template.replace(f"%TODO{{{key}}}", value)
+
+        # filter out invalid citations
+        # 1. load citations file
+        with open(f"{template_dir / 'references'}.bib", "r") as file:
+            citations = file.read()
+        # 2. regex to find all \citep{...} entries in the template
+        cites = set(re.findall(r"\\citep{.*?}", template))
+        # 3. filter out the invalid citations
+        for cite in cites:
+            if cite[7:-1] not in citations:
+                template = template.replace(cite, "")
+
         # write the document
         with open(f"{template_dir / document_name}.tex", "w") as file:
             file.write(template)
 
 
-GLOBAL_PAPER_CONTEXT = """[Global Context]
+USER_SPECIFIC_CONTEXT = """[Global Context]
 Write a scientific paper about the machine learning framework called SymbolicAI which operates on the following principles:
 - Symbolic methods
 - Sub-symbolic methods
@@ -74,19 +88,21 @@ Write a scientific paper about the machine learning framework called SymbolicAI 
 - Cognitive architectures
 
 Consider:
-- Be precise in your writing and follow a scientific style.
+- Follow a precise, scientific and technical writing style.
 - Do not use any colloquial language, especially many adjectives and adverbs.
 - Formulate simple and understandable sentences.
-- Avoid using filler words and phrases."""
+- Avoid using filler words and phrases.
+
+"""
 
 
 if __name__ == "__main__":
     dir_path     = Path(__file__).parent.absolute() / "documents"
     template_dir = Path(__file__).parent.absolute() / "template"
     task = Symbol("[Objective]\nWrite a paper about the SymbolicAI framework. Include citations and references from the referenced papers. Follow primarily the [Task] instructions.")
-    Paper.context = GLOBAL_PAPER_CONTEXT
-    hierarchy = Paper(
-        Implementation(
+    Paper.context = USER_SPECIFIC_CONTEXT
+    hierarchy = Trace(Paper(
+        Algorithm(
             Source(file_link=(dir_path / "method/symbolicai_docs.txt").as_posix()),
         ),
         Method(
@@ -94,15 +110,28 @@ if __name__ == "__main__":
         ),
         RelatedWork(
             Cite(bib_link='Newell:56'),
-            Cite(file_link=(dir_path / "bib/related_work/Newell:57.txt").as_posix()),
-            Cite(file_link=(dir_path / "bib/related_work/Laird:87.txt").as_posix()),
-            Cite(file_link=(dir_path / "bib/related_work/Newell:72.txt").as_posix()),
-            Cite(file_link=(dir_path / "bib/related_work/McCarthy:06.txt").as_posix()),
+            Cite(bib_link='Newell:57'),
+            Cite(bib_link='Laird:87'),
+            Cite(bib_link='Newell:72'),
+            Cite(bib_link='McCarthy:06'),
+            Cite(bib_link='Santoro:22'),
         ),
-        Introduction(),
+        Introduction(
+            Cite(bib_link='Brown:20'),
+            Cite(bib_link='Santoro:22'),
+            Cite(bib_link='Ouyang:22'),
+            Cite(bib_link='Santoro:22'),
+            Cite(bib_link='Wei:22'),
+        ),
         Abstract(),
         Title(),
-    )
+        # add at the end to give more details about the implementation
+        Appendix(
+            Implementation(
+                Source(file_link=(dir_path / "method/symbolicai_docs.txt").as_posix()),
+            ),
+        ),
+    ))
 
     doc_gen = DocumentGenerator()
     res = doc_gen(task, hierarchy) # This will be a Symbol

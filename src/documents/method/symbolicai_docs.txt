@@ -1513,36 +1513,3 @@ Special thanks are owed to [Kajetan Schweighofer](https://www.linkedin.com/in/ka
 ### Contribution
 
 If you wish to contribute to this project, please read the [CONTRIBUTING.md](CONTRIBUTING.md) file for details on our code of conduct, as well as the process for submitting pull requests. Any contributions are greatly appreciated.
-
-### 📜 Citation
-
-```bibtex
-@software{Dinu_SymbolicAI_2022,
-  author = {Dinu, Marius-Constantin},
-  editor = {Leoveanu-Condrei, Claudiu},
-  title = {{SymbolicAI: A Neuro-Symbolic Perspective on Large Language Models (LLMs)}},
-  url = {https://github.com/ExtensityAI/symbolicai},
-  month = {11},
-  year = {2022}
-}
-```
-
-### 📝 License
-
-This project is licensed under the BSD-3-Clause License - see the [LICENSE](LICENSE) file for details.
-
-### Like this Project?
-
-If you appreciate this project, please leave a star ⭐️ and share it with friends and colleagues. To support the ongoing development of this project even further, consider donating. Thank you!
-
-[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/donate/?hosted_button_id=WCWP5D2QWZXFQ)
-
-We are also seeking contributors or investors to help grow and support this project. If you are interested, please reach out to us.
-
-### 📫 Contact
-
-Feel free to contact us with any questions about this project via [email](mailto:office@extensity.ai), through our [website](https://extensity.ai/), or find us on Discord:
-
-[![Discord](https://img.shields.io/discord/768087161878085643?label=Discord&logo=Discord&logoColor=white)](https://discord.gg/QYMNnh9ra8)
-
-To contact me directly, you can find me on [LinkedIn](https://www.linkedin.com/in/mariusconstantindinu/), [Twitter](https://twitter.com/DinuMariusC), or at my personal [website](https://www.dinu.at/).

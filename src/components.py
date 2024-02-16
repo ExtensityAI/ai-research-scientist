@@ -10,18 +10,16 @@ from symai.post_processors import StripPostProcessor, CodeExtractPostProcessor
 
 DEFAULT_BIB_PATH = (Path(__file__).parent.absolute() / "documents" / "bib" / "references.bib").as_posix()
 
-GLOBAL_CONTEXT = """[Global Context]"""
 
 PAPER_STATIC_CONTEXT = """[General Context]
 {context}
 
 [Detailed Description]
 Your output format should be parsable by a LaTeX compiler. All produced content should be enclosed between the \n```latex\n ... \n``` blocks. Do not create document classes or other LaTeX meta commands. Always assume that the document class is already defined. Only produce exactly one latex block with all your content.
-Only use either `section`, `subsection`, `paragraph`, `texttt`, `textbf`, `emph`, `lstlisting` or `citep` commands to structure your content. Do not use any other LaTeX commands.
+Only use either `section`, `subsection`, `paragraph`, `texttt`, `textbf`, `emph`, or `citep` commands to structure your content. Do not use any other LaTeX commands.
 When using `\\paragraph{{...}}` commands, always include a name in the curly brackets, e.g. `\\paragraph{{My paragraph name}}`.
-If you use the `lstlisting` command, always include a caption and a label, e.g. `\\begin{{lstlisting}}[caption=My caption,label=lst:mylabel] ... \\end{{lstlisting}}` and every begin command must have a corresponding end command.
-Only use `lstlisting` for code snippets if addressing the implementation section and it is related to the respective source content.
 NEVER change the citation style / tag names. Always keep the original `cite` or `citep` format, i.e. `\\citep{{Placeholder:YY}}` remains as is at the same position in your text, where `Placeholder` represents the actual citation name and `YY` the two digit year format. Here are some examples: `\\citep{{Newell:56}}`, `\\citep{{Newell:57}}`, `\\citep{{Laird:87}}`, `\\citep{{Newell:72}}`, `\\citep{{McCarthy:06}}`.
+Do NOT reference figures or tables.
 
 The following is a general example of your expected output:
 
@@ -32,14 +30,15 @@ The following is a general example of your expected output:
 % TODO: your content here
 \\end{{document}}
 ```
-Do not create `\\begin{{document}}` or `\\end{{document}}` commands. Only the content that would be placed into the TODO block expected between ```latex ... ``` if not otherwise specified.
+NEVER create `\\begin{{document}}` or `\\end{{document}}` commands, because they are provided by the template. Only create the content that would be placed into the TODO block formatted between ```latex ... ``` if not otherwise specified.
 NEVER repeat a section or subsection name if one already exists in the document.
 
 {description}
 """
 
 
-DO_NOT_CHANGE_CITATIONS = "Do NOT ADD ANY NEW citations or references. Just focus on the content and preserve 1:1 existing citations and references if there are any."
+DO_NOT_CHANGE_CITATIONS = """Do NOT ADD NEW citations or references if they are not already provided. Just focus on the content and preserve 1:1 existing citations and references if there are any."""
+DO_NOT_ADD_ALGORITHMS   = """Do NOT REPEAT or ADD an algorithm if it is already provided in the source material."""
 
 
 class Paper(Expression):
@@ -56,39 +55,21 @@ class Paper(Expression):
         # access results from the global root node metadata
         results     = self.linker.results
         # all other results except the title, abstract, cite and source:
-        document    = [results[key].__str__() for key in results if not any([task in key for task in ['Title', 'Abstract', 'Cite', 'Source', 'Parallel', 'Sequence']]) and results[key].value_type == str]
+        document    = [results[key].__str__() for key in results if not any([task in key for task in ['Title', 'Abstract', 'Cite', 'Source', 'Parallel', 'Sequence', ]]) and results[key].value_type == str]
         # reverse the order of the document to match the expected output
         document    = document[::-1]
+        # get the appendix content
+        appendix    = [sec for key in results for sec in results[key].value if 'Appendix' in key]
         # add the conclusion
         document.append(self.conclusion(task, **kwargs).__str__())
         # create the final result
         result = Symbol({
             "title": self.linker.find('Title').__str__(),
             "abstract": self.linker.find('Abstract').__str__(),
-            "document": "\n".join(document)
+            "document": "\n".join(document),
+            "appendix": "\n".join(appendix)
         })
         return result
-
-    @property
-    def static_context(self):
-        assert Paper.context is not None, "The global context is not set."
-        return PAPER_STATIC_CONTEXT.format(context=Paper.context,
-                                           description=f'''The final paper must include the title an abstract and a related work section and method section.
-Try to preserve the original content and generate a coherent text based on the provided context.
-
-[Format]
-Instead of the ```latex ... ``` format, print the output in a ```json ... ``` format as shown below with the following structure:
-```json
-{{
-  "title": "Your title...",
-  "abstract": "Your abstract...",
-  "document": "Your other sections, subsections, and paragraphs and all the content e.g. introduction, related work, method, etc. ..."
-}}
-```
-Include all the LaTeX commands and content in the `document` field. Preserve ALL the original citations, references  and content according to best scientific writing practices.
-The final document should be at least 2 pages long.
-{DO_NOT_CHANGE_CITATIONS}
-''')
 
 
 class Context(Conversation):
@@ -191,13 +172,35 @@ class Method(Context):
     def forward(self, task, **kwargs):
         summary = self.source(task, **kwargs)
         # update the dynamic context globally for all types
-        self.adapt(context=summary, types=[RelatedWork, Abstract, Title, Introduction, Cite])
+        self.adapt(context=summary, types=[RelatedWork, Abstract, Title, Introduction, Cite, Implementation])
         return super().forward(task | f"[Source]\n{self.source.history()}", **kwargs)
 
     @property
     def description(self):
         return f"""[Task]
-Your goal is to write the method section which describes the methodological principles of the provided source history. Focus on a conceptual level and make connections to research related in the respective fields. Add mathematical formulas and formulations where appropriate and write proper definitions and explanations, but only related to the source history.
+Your goal is to write the method section which describes the methodological principles of the provided source history. Focus on a conceptual level and make connections to research related in the respective fields. Add mathematical formulas and formulations where appropriate and write proper definitions and explanations, but only related to the source history. Add mathematical equations related to the source material.
+When using equations use `\\begin{{equation}} ... \\end{{equation}}` or inline equations with `\\( ... \\)` commands.
+Also use greek letters for mathematical symbols and best practice notation for mathematical expressions.
+{DO_NOT_CHANGE_CITATIONS}
+{DO_NOT_ADD_ALGORITHMS}
+"""
+
+
+class Algorithm(Context):
+    def __init__(self, source, **kwargs):
+        super().__init__(**kwargs)
+        self.source = source
+
+    def forward(self, task, **kwargs):
+        return super().forward(task | f"[Source]\n{self.source.history()}", **kwargs)
+
+    @property
+    def description(self):
+        return f"""[Task]
+Your goal is to write the algorithm section which describes the technical details of the provided content. Create one main section but avoid adding multiple fragmented subsections. Write multiple content paragraphs only separated by a newline and show mainly the technical details of the algorithm. Address all technical details relevant to the [Global Context]. Add algorithm details related to the source material.
+When using algorithms, always include a caption and a label, e.g. `\\begin{{algorithmic}} ... \\end{{algorithmic}}` and only use commands compatible with `algpseudocode` package.
+If you use algorithms, it must include variables, operators, control structures, and greek letters for mathematical symbols.
+When adding algorithms also add explanations and descriptions of the algorithm steps. Do not add more than 3 algorithms. If you add more than one algorithm, you must surround them by text and explanations. Do not add multiple algorithms back to back. DO NOT add `captions` and `labels` to algorithms.
 {DO_NOT_CHANGE_CITATIONS}
 """
 
@@ -213,8 +216,11 @@ class Implementation(Context):
     @property
     def description(self):
         return f"""[Task]
-Your goal is to write the implementation section which describes the technical details of the provided content. Create one main section but avoid adding multiple fragmented subsections. Write multiple content paragraphs only separated by a newline and show mainly the technical details of the implementation. Address all technical details relevant to the [Global Context]. Add code snippets and examples where appropriate, but only related to the source history. Do not add generic code snippets.
+Your goal is to write the implementation section which describes the technical details of the provided content. Create one main section but avoid adding multiple fragmented subsections. Write multiple content paragraphs only separated by a newline and show mainly the technical details of the implementation. Address all technical details relevant to the [Global Context]. Add code snippets and examples, but only related to the source history. Do not add generic code snippets.
+If you add code use the `lstlisting` command, always include a caption and a label, e.g. `\\begin{{lstlisting}}[language=Python, caption=My caption,label=lst:mylabel] ... \\end{{lstlisting}}` and every begin command must have a corresponding end command.
+Only use `lstlisting` for code snippets if addressing the implementation section and it is related to the respective source content.
 {DO_NOT_CHANGE_CITATIONS}
+{DO_NOT_ADD_ALGORITHMS}
 """
 
 
@@ -227,7 +233,21 @@ class Conclusion(Context):
         return f"""[Task]
 Your goal is to write the conclusion section which summarizes the main findings and results of the paper. Include also a discussion of the limitations and future work.
 {DO_NOT_CHANGE_CITATIONS}
+{DO_NOT_ADD_ALGORITHMS}
 """
+
+
+class Appendix(Context):
+    def __init__(self, *sections, **kwargs):
+        super().__init__(**kwargs)
+        for task in sections:
+            task.metadata.detach = True
+        self.sections   = Parallel(*sections, sequential=True)
+
+    def forward(self, task, **kwargs):
+        # update the dynamic context globally for all types
+        res = self.sections(task, **kwargs)
+        return res
 
 
 class RelatedWork(Context):
@@ -244,7 +264,9 @@ class RelatedWork(Context):
     def description(self):
         return f"""[Task]
 Write a coherent related work section in the context of the paper and based on the provided citation sources. Create one main section but avoid adding multiple fragmented subsections. Write multiple content paragraphs only separated by a newline.
+Do not create repetitive paragraphs.
 {DO_NOT_CHANGE_CITATIONS}
+{DO_NOT_ADD_ALGORITHMS}
 """
 
 
@@ -261,9 +283,10 @@ class Introduction(Context):
     @property
     def description(self):
         return f"""[Task]
-Write a coherent introduction section in the context of the paper and based on the provided context.
-Do not add any subsections or paragraph tags. Write multiple content text blocks only separated by a newline.
+Write a coherent introduction section in the context of the paper and based on the provided context. Add one introduction section `\\section{{Introduction}}`.
+Do not add any subsections or paragraph tags. Write multiple content text blocks only separated by a newline. Include the provided citations and references.
 {DO_NOT_CHANGE_CITATIONS}
+{DO_NOT_ADD_ALGORITHMS}
 """
 
 
@@ -281,6 +304,7 @@ The abstract should be wrapped as follows:
 \\end{{abstract}}
 ```
 Generate the `\\begin{{abstract}}` and `\\end{{abstract}}` commands and place the content between the TODO block.
+Do not add a new line to split the text into paragraphs or any other commands inside the abstract block.
 """
 
 
@@ -288,7 +312,7 @@ class Title(Context):
     @property
     def description(self):
         return f"""[Task]
-Write the paper title given the provided context. Add one title tag for the document.
+Write the paper title given the provided context. Add one title tag for the document. Keep a concise and catchy title.
 
 [Format]
 The title should be wrapped in a `title` command as follows:

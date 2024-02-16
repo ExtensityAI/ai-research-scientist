@@ -168,3 +168,6 @@ src/template/main.mtc0
 src/template/main.out
 src/template/main.pdf
 src/template/main.tex
+src/template/main.fdb_latexmk
+src/template/main.fls
+src/template/main.synctex.gz
